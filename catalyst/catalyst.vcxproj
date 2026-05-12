@@ -34,8 +34,7 @@
     <OutDir>../bin/</OutDir>
     <IntDir>../bin/intermediates/</IntDir>
     <IncludePath>../catalyst/project/;../catalyst/project/external/zdraw/external/freetype/;$(IncludePath)</IncludePath>
-    <VcpkgEnabled>true</VcpkgEnabled>
-    <VcpkgTriplet>x64-windows-static</VcpkgTriplet>
+    <LibraryPath>../catalyst/project/external/zdraw/external/freetype/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -58,7 +57,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <AdditionalDependencies>winmm.lib;d3d11.lib;d3dcompiler.lib;windowscodecs.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freetype.lib;winmm.lib;d3d11.lib;d3dcompiler.lib;windowscodecs.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -10,23 +10,27 @@ jobs:
     runs-on: windows-2022
     
     steps:
-    - uses: actions/checkout@v4
-    
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+        fetch-depth: 1
+
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
-    
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: 'C:/vcpkg'
-        vcpkgGitCommitId: '501db0f17ef6df184fcdbfbe0f87cde2313b6ab1'
-    
-    - name: Install freetype
-      run: C:/vcpkg/vcpkg install freetype:x64-windows-static
-    
+
     - name: Build
-      run: msbuild catalyst/catalyst.vcxproj -p:Configuration=Release -p:Platform=x64 -p:VcpkgEnabled=true -p:VcpkgTriplet=x64-windows-static -m
-    
+      run: |
+        msbuild catalyst/catalyst.vcxproj `
+          -p:Configuration=Release `
+          -p:Platform=x64 `
+          -p:PlatformToolset=v143 `
+          -p:WindowsTargetPlatformVersion=10.0 `
+          -p:UseStaticLib=true `
+          -p:WholeProgramOptimization=true `
+          -m `
+          -verbosity:minimal
+
     - name: Upload
       uses: actions/upload-artifact@v4
       with:

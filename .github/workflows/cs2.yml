@@ -2,84 +2,33 @@ name: Build CS2 External
 
 on:
   push:
-    branches: [ "main", "master" ]
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   workflow_dispatch:
-
-env:
-  SOLUTION_NAME: catalyst.slnx
-  PROJECT_NAME: catalyst
-  CONFIGURATION: Release
-  PLATFORM: x64
 
 jobs:
   build:
     runs-on: windows-2022
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: false
-        fetch-depth: 1
-
-    - name: Setup Visual Studio environment
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
-        toolset: 14.3
-
+    - uses: actions/checkout@v4
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+        vcpkgDirectory: 'C:/vcpkg'
         vcpkgGitCommitId: '501db0f17ef6df184fcdbfbe0f87cde2313b6ab1'
-
-    - name: Install dependencies via vcpkg
-      run: |
-        cd ${{ runner.workspace }}/vcpkg
-        ./vcpkg install freetype:x64-windows-static
-        ./vcpkg install directx-headers:x64-windows-static
-        ./vcpkg install directxtk:x64-windows-static
-        ./vcpkg install imgui:x64-windows-static
-        ./vcpkg install minhook:x64-windows-static
-
-    - name: Integrate vcpkg with MSBuild
-      run: |
-        ${{ runner.workspace }}/vcpkg/vcpkg integrate install
-
-    - name: Build solution
-      run: |
-        msbuild ${{ env.SOLUTION_NAME }} `
-          -p:Configuration=${{ env.CONFIGURATION }} `
-          -p:Platform=${{ env.PLATFORM }} `
-          -p:PlatformToolset=v143 `
-          -p:WindowsTargetPlatformVersion=10.0 `
-          -p:VcpkgEnabled=true `
-          -p:VcpkgTriplet=x64-windows-static `
-          -p:UseStaticLib=true `
-          -p:WholeProgramOptimization=true `
-          -p:MultiProcessorCompilation=true `
-          -m
-
-    - name: Upload build artifacts
+    
+    - name: Install freetype
+      run: C:/vcpkg/vcpkg install freetype:x64-windows-static
+    
+    - name: Build
+      run: msbuild catalyst/catalyst.vcxproj -p:Configuration=Release -p:Platform=x64 -p:VcpkgEnabled=true -p:VcpkgTriplet=x64-windows-static -m
+    
+    - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: catalyst-build-${{ github.run_number }}
-        path: |
-          bin/Release/catalyst.exe
-          bin/Release/catalyst.pdb
-        retention-days: 7
-        compression-level: 9
-
-    - name: Upload for debug (nightly)
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-      uses: actions/upload-artifact@v4
-      with:
-        name: catalyst-latest
-        path: bin/Release/catalyst.exe
-        retention-days: 30
+        name: catalyst
+        path: bin/catalyst.exe

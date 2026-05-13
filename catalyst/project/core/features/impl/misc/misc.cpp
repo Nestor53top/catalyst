@@ -142,4 +142,72 @@ namespace features::misc {
             case 3: PlaySoundA( "SystemHand", nullptr, SND_ALIAS | SND_ASYNC ); break;
             }
             if ( settings::g_esp.m_hit_marker.enabled )
-                m_hit_markers.push_back( { now, settings::g
+                m_hit_markers.push_back( { now, settings::g_esp.m_hit_marker.duration / 1000.0f } );
+        }
+        m_old_hits = hits;
+    }
+
+    void misc_features::draw_hit_markers( zdraw::draw_list& dl )
+    {
+        auto& cfg = settings::g_esp.m_hit_marker;
+        if ( !cfg.enabled || m_hit_markers.empty( ) ) return;
+        auto now = std::chrono::steady_clock::now( );
+        auto [w, h] = zdraw::get_display_size( );
+        float cx = w / 2, cy = h / 2;
+        m_hit_markers.erase( std::remove_if( m_hit_markers.begin( ), m_hit_markers.end( ), [&]( auto& m ) {
+            return std::chrono::duration<float>( now - m.time ).count( ) > m.max_time;
+        } ), m_hit_markers.end( ) );
+        for ( auto& m : m_hit_markers )
+        {
+            float el = std::chrono::duration<float>( now - m.time ).count( );
+            float a = std::clamp( 1.0f - el / m.max_time, 0.0f, 1.0f );
+            auto col = zdraw::rgba{ cfg.color.r, cfg.color.g, cfg.color.b, (std::uint8_t)( a * cfg.color.a ) };
+            float s = (float)cfg.size, g = (float)cfg.gap;
+            dl.add_line( cx - g - s, cy - g - s, cx - g, cy - g, col, 1.5f );
+            dl.add_line( cx + g + s, cy - g - s, cx + g, cy - g, col, 1.5f );
+            dl.add_line( cx - g - s, cy + g + s, cx - g, cy + g, col, 1.5f );
+            dl.add_line( cx + g + s, cy + g + s, cx + g, cy + g, col, 1.5f );
+        }
+    }
+
+    void misc_features::draw_damage_indicators( zdraw::draw_list& dl )
+    {
+        auto& cfg = settings::g_esp.m_damage_indicator;
+        if ( !cfg.enabled || m_damage_indicators.empty( ) ) return;
+        auto now = std::chrono::steady_clock::now( );
+        m_damage_indicators.erase( std::remove_if( m_damage_indicators.begin( ), m_damage_indicators.end( ), [&]( auto& d ) {
+            return std::chrono::duration<float>( now - d.time ).count( ) > d.max_time;
+        } ), m_damage_indicators.end( ) );
+        zdraw::push_font( g::render.fonts( ).pretzel_24 );
+        for ( auto& d : m_damage_indicators )
+        {
+            float el = std::chrono::duration<float>( now - d.time ).count( );
+            float a = std::clamp( 1.0f - el / d.max_time, 0.0f, 1.0f );
+            math::vector3 wp = d.pos;
+            wp.z += el * cfg.floating_speed;
+            auto scr = systems::g_view.project( wp );
+            if ( !systems::g_view.projection_valid( scr ) ) continue;
+            auto col = d.is_headshot ? cfg.crit_color : cfg.color;
+            auto cur = zdraw::rgba{ col.r, col.g, col.b, (std::uint8_t)( a * col.a ) };
+            std::string txt = std::to_string( (int)d.damage );
+            float tw, th; std::tie( tw, th ) = zdraw::measure_text( txt );
+            dl.add_text( scr.x - tw / 2, scr.y - th / 2, txt, nullptr, cur, zdraw::text_style::outlined );
+        }
+        zdraw::pop_font( );
+    }
+
+    void misc_features::draw_watermark( zdraw::draw_list& dl )
+    {
+        if ( !settings::g_misc.m_main.watermark ) return;
+        auto gv = g::memory.read<std::uintptr_t>( g::offsets.global_vars );
+        float fps = gv ? 1.0f / g::memory.read<float>( gv + 0x08 ) : 0;
+        std::string txt = std::format( "catalyst | fps: {:.0f}", fps );
+        float tw, th; std::tie( tw, th ) = zdraw::measure_text( txt );
+        auto [w, h] = zdraw::get_display_size( );
+        float x = w - tw - 25, y = 15;
+        dl.add_rect_filled( x - 10, y - 5, tw + 20, th + 10, zdraw::rgba{ 12,12,12,180 } );
+        dl.add_rect( x - 10, y - 5, tw + 20, th + 10, zdraw::rgba{ 45,45,45,200 } );
+        dl.add_text( x, y, txt, nullptr, zdraw::rgba{ 215,220,240,255 }, zdraw::text_style::outlined );
+    }
+
+}
